@@ -17,7 +17,12 @@ along with The Arduino WiFiEsp library.  If not, see
 --------------------------------------------------------------------*/
 
 #include <Arduino.h>
+// #include <avr/pgmspace.h>
+#ifdef ARDUINO_ARCH_AVR
 #include <avr/pgmspace.h>
+#else
+#include <pgmspace.h>
+#endif
 
 #include "utility/EspDrv.h"
 #include "utility/debug.h"
