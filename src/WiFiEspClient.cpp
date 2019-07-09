@@ -70,6 +70,16 @@ int WiFiEspClient::connectSSL(IPAddress ip, uint16_t port)
 	return connect(s, port, SSL_MODE);
 }
 
+int WiFiEspClient::connect(const char *host, uint16_t port, int timeout)
+{
+	return connect(host, port);  // FIXME: 'timeout' not yet implemented! 	
+}
+
+int WiFiEspClient::connect(IPAddress ip, uint16_t port, int timeout)
+{
+	return connect(ip, port);  // FIXME: 'timeout' not yet implemented! 
+}
+
 int WiFiEspClient::connect(const char* host, uint16_t port)
 {
     return connect(host, port, TCP_MODE);
