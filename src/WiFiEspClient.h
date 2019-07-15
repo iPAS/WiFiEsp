@@ -40,8 +40,8 @@ public:
   size_t println(const __FlashStringHelper *ifsh);
 
 
-  virtual int connect(IPAddress ip, uint16_t port, int timeout);
-  virtual int connect(const char *host, uint16_t port, int timeout);
+  virtual int connect(IPAddress ip, uint16_t port, int timeout);  // FIXME: just a quick fix, not sure how to implement.
+  virtual int connect(const char *host, uint16_t port, int timeout);  // FIXME: just a quick fix, not sure how to implement.
 
   /*
   * Connect to the specified IP address and port. The return value indicates success or failure.
