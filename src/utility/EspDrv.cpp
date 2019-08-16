@@ -72,6 +72,59 @@ uint16_t EspDrv::_remotePort  =0;
 uint8_t EspDrv::_remoteIp[] = {0};
 
 
+void _debug_data(const char * prefix, const uint8_t *data, uint16_t len) {
+    Serial.println();  // XXX:
+    Serial.print(prefix);
+    for (int i = 0; i < len; i++) {
+        if (data[i] < 16) Serial.print("0");
+        Serial.print(data[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println();
+
+    /*
+    Serial.print(prefix);
+    for (int i = 0; i < len; i++) {
+        Serial.print(" ");
+        if (data[i] >= (uint8_t)'0')
+            Serial.print((char)data[i]);
+        else
+            Serial.print(" ");
+        Serial.print(" ");
+    }  // XXX:
+    Serial.println();
+    */
+
+    Serial.print(prefix);
+    for (int i = 0; i < len; i++) {
+        Serial.print((char)data[i]);
+    }  // XXX:
+    Serial.println();
+}
+
+
+void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {
+	char cmdBuf[CMD_BUFFER_SIZE];
+
+	//va_list args;
+	//va_start(args, cmd);
+	//vsnprintf_P(cmdBuf, CMD_BUFFER_SIZE, (char*)cmd, args);
+	//va_end(args);
+
+	//strlen_P()
+	//strcpy_P()
+
+    //PGM_P p = reinterpret_cast<PGM_P>(data);
+    //for (uint16_t i = 0; i < len; i++) {
+    //    unsigned char c = pgm_read_byte(p++);
+    //    espSerial->write(c);
+    //}
+
+    strcpy_P(cmdBuf, (char *)cmd);
+    _debug_data(prefix, (const uint8_t *)cmdBuf, strlen(cmdBuf));
+}
+
+
 void EspDrv::wifiDriverInit(Stream *espSerial)
 {
 	LOGDEBUG(F("> wifiDriverInit"));
@@ -804,22 +857,30 @@ bool EspDrv::sendData(uint8_t sock, const uint8_t *data, uint16_t len)
 
 	char cmdBuf[20];
 	sprintf_P(cmdBuf, PSTR("AT+CIPSEND=%d,%u"), sock, len);
-	//LOGDEBUG1(F("> sendData:"), cmdBuf);
+	LOGDEBUG1(F("> sendData:"), cmdBuf);
 	espSerial->println(cmdBuf);
+
+
+    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+
 
 	int idx = readUntil(1000, (char *)">", false);
 	if(idx!=NUMESPTAGS)
 	{
-		LOGERROR(F("Data packet send error (1)"));
+		LOGERROR(F("Data packet send error (1) ###"));  // XXX:
 		return false;
 	}
 
 	espSerial->write(data, len);
 
+
+    _debug_data(">>> ", data, len);  // XXX:
+
+
 	idx = readUntil(2000);
-	if(idx!=TAG_SENDOK)
+    if(idx!=TAG_SENDOK)
 	{
-		LOGERROR(F("Data packet send error (2)"));
+		LOGERROR(F("Data packet send error (2) ###"));  // XXX:
 		return false;
 	}
 
@@ -836,14 +897,18 @@ bool EspDrv::sendData(uint8_t sock, const __FlashStringHelper *data, uint16_t le
 	sprintf_P(cmdBuf, PSTR("AT+CIPSEND=%d,%u"), sock, len2);
 	espSerial->println(cmdBuf);
 
+
+    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+
+
 	int idx = readUntil(1000, (char *)">", false);
 	if(idx!=NUMESPTAGS)
 	{
-		LOGERROR(F("Data packet send error (1)"));
+		LOGERROR(F("F(Data) packet send error (1)"));  // XXX:
 		return false;
 	}
 
-	//espSerial->write(data, len);
+	//Cannot use espSerial->write(data, len) to get the data from flash memory. So, ..
 	PGM_P p = reinterpret_cast<PGM_P>(data);
 	for (uint16_t i=0; i<len; i++)
 	{
@@ -856,10 +921,14 @@ bool EspDrv::sendData(uint8_t sock, const __FlashStringHelper *data, uint16_t le
 		espSerial->write('\n');
 	}
 
+
+    _debug_data(">>> ", data, len);  // XXX:
+
+
 	idx = readUntil(2000);
 	if(idx!=TAG_SENDOK)
 	{
-		LOGERROR(F("Data packet send error (2)"));
+		LOGERROR(F("F(Data) packet send error (2)"));  // XXX:
 		return false;
 	}
 
@@ -876,6 +945,10 @@ bool EspDrv::sendDataUdp(uint8_t sock, const char* host, uint16_t port, const ui
 	//LOGDEBUG1(F("> sendDataUdp:"), cmdBuf);
 	espSerial->println(cmdBuf);
 
+
+    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+
+
 	int idx = readUntil(1000, (char *)">", false);
 	if(idx!=NUMESPTAGS)
 	{
@@ -884,6 +957,10 @@ bool EspDrv::sendDataUdp(uint8_t sock, const char* host, uint16_t port, const ui
 	}
 
 	espSerial->write(data, len);
+
+
+    _debug_data(">>> ", data, len);  // XXX:
+
 
 	idx = readUntil(2000);
 	if(idx!=TAG_SENDOK)
@@ -933,6 +1010,10 @@ bool EspDrv::sendCmdGet(const __FlashStringHelper* cmd, const char* startTag, co
 
 	// send AT command to ESP
 	espSerial->println(cmd);
+
+
+    _debug_data(">>> ", cmd);  // XXX:
+
 
 	// read result until the startTag is found
 	idx = readUntil(1000, startTag);
@@ -1003,6 +1084,10 @@ int EspDrv::sendCmd(const __FlashStringHelper* cmd, int timeout)
 
 	espSerial->println(cmd);
 
+
+    _debug_data(">>> ", cmd);  // XXX:
+
+
 	int idx = readUntil(timeout);
 
 	LOGDEBUG1(F("---------------------------------------------- >"), idx);
@@ -1033,6 +1118,10 @@ int EspDrv::sendCmd(const __FlashStringHelper* cmd, int timeout, ...)
 
 	espSerial->println(cmdBuf);
 
+
+    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+
+
 	int idx = readUntil(timeout);
 
 	LOGDEBUG1(F("---------------------------------------------- >"), idx);
@@ -1050,6 +1139,10 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 {
 	ringBuf.reset();
 
+
+    String buf;  // XXX:
+
+
 	char c;
     unsigned long start = millis();
 	int ret = -1;
@@ -1060,7 +1153,9 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 		{
             c = (char)espSerial->read();
 			LOGDEBUG0(c);
-			ringBuf.push(c);
+            ringBuf.push(c);
+
+            buf += c;  // XXX:
 
 			if (tag!=NULL)
 			{
@@ -1084,9 +1179,13 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 		}
     }
 
+
+    _debug_data("<<< ", (const uint8_t *)buf.c_str(), buf.length());  // XXX:
+
+
 	if (millis() - start >= timeout)
 	{
-		LOGWARN(F(">>> TIMEOUT >>>"));
+		LOGWARN(F("### TIMEOUT ###"));  // XXX:
 	}
 
     return ret;

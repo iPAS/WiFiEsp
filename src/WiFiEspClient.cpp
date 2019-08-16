@@ -72,16 +72,16 @@ int WiFiEspClient::connectSSL(IPAddress ip, uint16_t port)
 
 int WiFiEspClient::connect(const char *host, uint16_t port, int timeout)
 {
-    LOGINFO1(F("Call > "), F("connect(const char *host, uint16_t port, int timeout)"));
     setTimeout(timeout);  // FIXME: 'timeout' not yet tested!
 	return connect(host, port);
 }
 
 int WiFiEspClient::connect(IPAddress ip, uint16_t port, int timeout)
 {
-    LOGINFO1(F("Call > "), F("connect(IPAddress ip, uint16_t port, int timeout)"));
-    setTimeout(timeout);  // FIXME: 'timeout' not yet tested!
-	return connect(ip, port);
+    char s[16];
+	sprintf_P(s, PSTR("%d.%d.%d.%d"), ip[0], ip[1], ip[2], ip[3]);
+
+	return connect(s, port, timeout);
 }
 
 int WiFiEspClient::connect(const char* host, uint16_t port)
