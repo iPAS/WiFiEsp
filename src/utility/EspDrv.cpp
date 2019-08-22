@@ -51,7 +51,14 @@ typedef enum
 
 Stream *EspDrv::espSerial;
 
-RingBuffer EspDrv::ringBuf(32);
+// RingBuffer EspDrv::ringBuf(32);
+RingBuffer EspDrv::ringBuf(CMD_BUFFER_SIZE);  // FIXME: eventually, I have fixed the buggy on receiving too big data stream,
+                                              //         by increasing size of the buffer.
+                                              //        However, it is larger than we need. Please save this in near future...
+                                              //
+                                              //        BTW, the first author quickly implemented RingBuffer on his own.
+                                              //        Its functions are limited.
+                                              //        Maybe, this is another case could be improved.
 
 // Array of data to cache the information related to the networks discovered
 char 	EspDrv::_networkSsid[][WL_SSID_MAX_LENGTH] = {{"1"},{"2"},{"3"},{"4"},{"5"}};
@@ -72,8 +79,8 @@ uint16_t EspDrv::_remotePort  =0;
 uint8_t EspDrv::_remoteIp[] = {0};
 
 
-void _debug_data(const char * prefix, const uint8_t *data, uint16_t len) {
-    Serial.println();  // XXX:
+void _debug_data(const char * prefix, const uint8_t *data, uint16_t len, bool show_ascii=true) {  // XXX:
+    Serial.println();
     Serial.print(prefix);
     for (int i = 0; i < len; i++) {
         if (data[i] < 16) Serial.print("0");
@@ -91,28 +98,22 @@ void _debug_data(const char * prefix, const uint8_t *data, uint16_t len) {
         else
             Serial.print(" ");
         Serial.print(" ");
-    }  // XXX:
+    }
     Serial.println();
     */
+
+   if (!show_ascii) return;
 
     Serial.print(prefix);
     for (int i = 0; i < len; i++) {
         Serial.print((char)data[i]);
-    }  // XXX:
+    }
     Serial.println();
 }
 
 
-void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {
+void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {  // XXX:
 	char cmdBuf[CMD_BUFFER_SIZE];
-
-	//va_list args;
-	//va_start(args, cmd);
-	//vsnprintf_P(cmdBuf, CMD_BUFFER_SIZE, (char*)cmd, args);
-	//va_end(args);
-
-	//strlen_P()
-	//strcpy_P()
 
     //PGM_P p = reinterpret_cast<PGM_P>(data);
     //for (uint16_t i = 0; i < len; i++) {
@@ -122,6 +123,19 @@ void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {
 
     strcpy_P(cmdBuf, (char *)cmd);
     _debug_data(prefix, (const uint8_t *)cmdBuf, strlen(cmdBuf));
+}
+
+
+void _debug_show(const char * str_format, ...) {  // XXX:
+    char str[64];
+    uint8_t len = strlen(str_format);
+    if (len > sizeof(str)-1)
+        Serial.println("EspDrv::_debug_show() str_format size is too long!");
+    va_list args;
+	va_start(args, str_format);
+    vsprintf(str, str_format, args);
+    va_end(args);
+    Serial.println(str);
 }
 
 
@@ -861,7 +875,7 @@ bool EspDrv::sendData(uint8_t sock, const uint8_t *data, uint16_t len)
 	espSerial->println(cmdBuf);
 
 
-    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+    _debug_data("1>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
 
 
 	int idx = readUntil(1000, (char *)">", false);
@@ -874,7 +888,7 @@ bool EspDrv::sendData(uint8_t sock, const uint8_t *data, uint16_t len)
 	espSerial->write(data, len);
 
 
-    _debug_data(">>> ", data, len);  // XXX:
+    _debug_data("2>> ", data, len, false);  // XXX:
 
 
 	idx = readUntil(2000);
@@ -1155,14 +1169,15 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 			LOGDEBUG0(c);
             ringBuf.push(c);
 
+
             buf += c;  // XXX:
+
 
 			if (tag!=NULL)
 			{
 				if (ringBuf.endsWith(tag))
 				{
 					ret = NUMESPTAGS;
-					//LOGDEBUG1("xxx");
 				}
 			}
 			if(findTags)
@@ -1181,6 +1196,7 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 
 
     _debug_data("<<< ", (const uint8_t *)buf.c_str(), buf.length());  // XXX:
+    _debug_show("... ret=%d", ret);
 
 
 	if (millis() - start >= timeout)
