@@ -79,7 +79,13 @@ uint16_t EspDrv::_remotePort  =0;
 uint8_t EspDrv::_remoteIp[] = {0};
 
 
+// ============================================================================
+#define PROTOCOL_DEBUGGING_LEVEL 3
+
+
 void _debug_data(const char * prefix, const uint8_t *data, uint16_t len, bool show_ascii=true) {  // XXX:
+    if (_ESPLOGLEVEL_ < PROTOCOL_DEBUGGING_LEVEL) return;
+
     Serial.println();
     Serial.print(prefix);
     for (int i = 0; i < len; i++) {
@@ -113,6 +119,8 @@ void _debug_data(const char * prefix, const uint8_t *data, uint16_t len, bool sh
 
 
 void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {  // XXX:
+    if (_ESPLOGLEVEL_ < PROTOCOL_DEBUGGING_LEVEL) return;
+
 	char cmdBuf[CMD_BUFFER_SIZE];
 
     //PGM_P p = reinterpret_cast<PGM_P>(data);
@@ -127,7 +135,9 @@ void _debug_data(const char * prefix, const __FlashStringHelper* cmd, ...) {  //
 
 
 void _debug_show(const char * str_format, ...) {  // XXX:
-    char str[64];
+    if (_ESPLOGLEVEL_ < PROTOCOL_DEBUGGING_LEVEL) return;
+
+    char str[CMD_BUFFER_SIZE];
     uint8_t len = strlen(str_format);
     if (len > sizeof(str)-1)
         Serial.println("EspDrv::_debug_show() str_format size is too long!");
@@ -137,6 +147,7 @@ void _debug_show(const char * str_format, ...) {  // XXX:
     va_end(args);
     Serial.println(str);
 }
+// ============================================================================
 
 
 void EspDrv::wifiDriverInit(Stream *espSerial)
@@ -828,7 +839,7 @@ bool EspDrv::getData(uint8_t connId, uint8_t *data, bool peek, bool* connClose)
 	} while(millis() - _startMillis < 2000);
 
     // timed out, reset the buffer
-	LOGERROR1(F("TIMEOUT:"), _bufPos);
+	LOGERROR1(F("TIMEOUT while _bufPos ="), _bufPos);
 
     _bufPos = 0;
 	_connId = 0;
@@ -875,26 +886,26 @@ bool EspDrv::sendData(uint8_t sock, const uint8_t *data, uint16_t len)
 	espSerial->println(cmdBuf);
 
 
-    _debug_data("1>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
+    _debug_data(">>> ", (const uint8_t *)cmdBuf, strlen(cmdBuf));  // XXX:
 
 
 	int idx = readUntil(1000, (char *)">", false);
 	if(idx!=NUMESPTAGS)
 	{
-		LOGERROR(F("Data packet send error (1) ###"));  // XXX:
+		LOGERROR(F("Data packet send error (1)"));
 		return false;
 	}
 
 	espSerial->write(data, len);
 
 
-    _debug_data("2>> ", data, len, false);  // XXX:
+    _debug_data(">>> ", data, len, false);  // XXX:
 
 
 	idx = readUntil(2000);
     if(idx!=TAG_SENDOK)
 	{
-		LOGERROR(F("Data packet send error (2) ###"));  // XXX:
+		LOGERROR(F("Data packet send error (2)"));
 		return false;
 	}
 
@@ -966,7 +977,7 @@ bool EspDrv::sendDataUdp(uint8_t sock, const char* host, uint16_t port, const ui
 	int idx = readUntil(1000, (char *)">", false);
 	if(idx!=NUMESPTAGS)
 	{
-		LOGERROR(F("Data packet send error (1)"));
+		LOGERROR(F("UDP packet send error (1)"));  // XXX:
 		return false;
 	}
 
@@ -979,13 +990,12 @@ bool EspDrv::sendDataUdp(uint8_t sock, const char* host, uint16_t port, const ui
 	idx = readUntil(2000);
 	if(idx!=TAG_SENDOK)
 	{
-		LOGERROR(F("Data packet send error (2)"));
+		LOGERROR(F("UDP packet send error (2)"));  // XXX:
 		return false;
 	}
 
     return true;
 }
-
 
 
 void EspDrv::getRemoteIpAddress(IPAddress& ip)
@@ -1196,7 +1206,9 @@ int EspDrv::readUntil(unsigned int timeout, const char* tag, bool findTags)
 
 
     _debug_data("<<< ", (const uint8_t *)buf.c_str(), buf.length());  // XXX:
-    _debug_show("... ret=%d", ret);
+    _debug_show("    ret=%d", ret);
+    if (buf.indexOf("+IPD") >= 0)
+        LOGERROR(F("readUntil(): Found +IPD"));
 
 
 	if (millis() - start >= timeout)
