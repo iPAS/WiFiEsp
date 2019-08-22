@@ -138,6 +138,7 @@ size_t WiFiEspClient::write(const uint8_t *buf, size_t size)
 	if (!r)
 	{
 		setWriteError();
+		LOGERROR1(F("Return r="), r);  // XXX:
 		LOGERROR1(F("Failed to write to socket"), _sock);
 		delay(4000);
 		stop();
